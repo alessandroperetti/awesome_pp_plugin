@@ -29,8 +29,16 @@
         	private function __construct() {
 				$this->pp_plugin_path = plugin_dir_path(__FILE__);
 				$this->pp_lib_path = $this->pp_plugin_path . 'lib/';
-				include $this->pp_lib_path. 'Utility.php';
-		        
+				$this->pp_class_path = $this->pp_plugin_path . 'classes/';
+				// include lib content
+				foreach (glob($this->pp_lib_path . "*.php") as $filename){
+					include $filename;
+				}
+				// include classes content
+				foreach (glob($this->pp_class_path . "*.php") as $filename){
+					include $filename;
+				}
+				//Call setup plugin
             	$this->pp_setup_actions();
 			}
 
@@ -151,6 +159,9 @@
 				//AJAX for generating unique password
 				add_action('wp_ajax_generatepassword', array($this,'generatepassword')); // Logged-in users
 				add_action('wp_ajax_nopriv_generatepassword', array($this, 'generatepassword')); // Guest users
+				//AJAX for creating new unique password
+				add_action('wp_ajax_generate_and_save', array($this,'generate_and_save')); // Logged-in users
+				add_action('wp_ajax_nopriv_generate_and_save', array($this, 'generate_and_save')); // Guest users
 				//Edit the title in case of Manager Users 
 				remove_action('woocommerce_single_product_summary', 'woocommerce_template_single_title', 10, 2);
 				add_action('woocommerce_single_product_summary', array($this,'pp_product_as_manager'), 6, 2);
@@ -172,6 +183,16 @@
 				$confs = $wpdb->get_results("SELECT * FROM $table_conf ORDER BY priority ASC");
 				Utility::peretti_debug($confs);
 				echo json_encode($confs);
+				wp_die(); 
+			}
+
+			public function generate_and_save(){
+				global $wpdb;
+
+				include $this->pp_lib_path;
+				$pp_password = new PP_password();
+				$str_password = $pp_password->generate_password();
+				echo $str_password;
 				wp_die(); 
 			}
 
@@ -205,6 +226,7 @@
 								<div class="modal-body">
 									<select class="form-control" id="select-expiration">
 									</select>
+									<div id="password-generated" class="pp-hide"> <strong> Password generata: </strong> <p id="password-string"> </p> </div>
 									</div>	
 								<div class="modal-footer">
 									<button type="submit" id="password-generator" class="pp-button opa" disabled> Genera password </button>
@@ -228,8 +250,20 @@
 				jQuery(document).ready(function($) {
 
 					document.getElementById("password-generator").addEventListener("click", function(){
-						console.log("generate password clicked");
-						//TODO call AJAX function to generate password corresponding to currently blog id. Moreover save the password inside 
+						//call AJAX function to generate and save password corresponding to currently blog id.
+						var my_data = {
+           					 action: 'generate_and_save'  // This is required so WordPress knows which func to use
+       					};
+						jQuery.get(ajax_url, my_data, function(response) {
+							console.log(response);
+							//Modal body with new password generate plus the copy button
+							$("#password-string").html(response);
+							$("#password-generated").removeClass("pp-hide");/*  */
+							$("#password-generated").addClass("pp-show");/*  */
+							
+
+						});
+
 					});	
 
 					document.getElementById("shareBtn").addEventListener("click", function(){
