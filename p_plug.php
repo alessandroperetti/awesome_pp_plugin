@@ -135,11 +135,13 @@
 
 
 			public function pp_init() {
+				//Call setup action after the plugins are loaded
 				add_action('plugins_loaded', array($this, 'pp_setup'));
 			}
 
 			public function pp_setup(){
-				//Here I can insert all the actions
+				//All the actions
+				add_action( 'wp_insert_site', array($this, 'pp_new_blog_activation'), 10, 6);
 				add_action( 'admin_menu', array($this, 'pp_menu_product_list' ));
 				add_action('wp_enqueue_scripts', array($this, 'load_my_java'));
 				add_action('woocommerce_before_single_product', array($this, 'ajax_expired_passw'));
@@ -153,6 +155,13 @@
 				remove_action('woocommerce_single_product_summary', 'woocommerce_template_single_title', 10, 2);
 				add_action('woocommerce_single_product_summary', array($this,'pp_product_as_manager'), 6, 2);
 
+			}
+
+			public function pp_new_blog_activation($blog_id, $user_id, $domain, $path, $site_id, $meta){
+				Utility::peretti_debug("New blog action: ");
+				Utility::peretti_debug($blog_id);
+				error_log("new_id: \n");
+				error_log($blog_id);
 			}
 
 			public function actionconf(){
@@ -198,7 +207,7 @@
 									</select>
 									</div>	
 								<div class="modal-footer">
-									<button type="submit" id="password-generator" class="pp-button"> Genera password </button>
+									<button type="submit" id="password-generator" class="pp-button opa" disabled> Genera password </button>
 								</div>
 							</div>
 						</div>
@@ -247,15 +256,26 @@
 								modal.style.display = "none";
 							}
 						}
+
+						$("#select-expiration").change(function() {
+  							if($("#select-expiration").val() !== ''){
+								$("#password-generator").prop('disabled', false);
+								$("#password-generator").removeClass("opa");
+
+							}
+						});
+
 						var my_data = {
            					 action: 'actionconf'  // This is required so WordPress knows which func to use
        					};
+						   
 						// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 						jQuery.get(ajax_url, my_data, function(response) {
 							$("#select-expiration").html('');
 							//console.log(response);
 							response = JSON.parse(response);
 							$("#select-expiration").append('<label class="site-description" for="list_confs">Scegli la durata della password</label>');
+							$("#select-expiration").append('<option value=""> Scegli un opzione </option>');
 							response.forEach(element => {
 								$("#select-expiration").append(`<option value="${element.id}">${element.label}</option>`);
 							});
